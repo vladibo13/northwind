@@ -1,25 +1,14 @@
 import React from 'react';
 import NorthWindOrdersTable from '../northwind-orders-table';
-import axios from 'axios';
+import { connect } from 'react-redux';
+import { getOrders } from '../../redux/actions/ordersAction';
 
 class NorthWindOrders extends React.Component {
-	constructor(props) {
-		super(props);
-
-		this.state = {
-			orders: []
-		};
-	}
 	async componentDidMount() {
-		const url = 'http://localhost:5000/northwind/orders';
-		const result = await axios.get(url);
-		console.log(result);
-		this.setState({
-			orders: result.data
-		});
+		this.props.getOrders();
 	}
 	render() {
-		const { orders } = this.state;
+		const { orders } = this.props.order;
 
 		const headers = getHeaders(orders);
 		const data = getTableBody(orders);
@@ -52,4 +41,13 @@ function getTableRow(row) {
 		return <td> {value} </td>;
 	});
 }
-export default NorthWindOrders;
+
+const mapDispatchToProps = (dispatch) => {
+	return {
+		getOrders: () => dispatch(getOrders())
+	};
+};
+
+const mapStateToProps = (state) => ({ order: state.order });
+
+export default connect(mapStateToProps, mapDispatchToProps)(NorthWindOrders);
