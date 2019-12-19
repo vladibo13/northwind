@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 // const bcrypt = require('bcryptjs'); // npm install
 // const salt = bcrypt.genSaltSync(10);
 
-router.get('/register', async (req, res, next) => {
+router.post('/register', async (req, res, next) => {
 	console.log(req.body);
 	const { email, password, lastName, firstName } = req.body;
 	if (!email || !password || !lastName || !firstName) return res.json({ msg: 'fields cannot be empty' });
@@ -15,13 +15,17 @@ router.get('/register', async (req, res, next) => {
 		console.log(emailExist);
 		if (emailExist) return res.json({ msg: 'user already exist' });
 		const result = await pool.execute(getUserInsertionQuery(), [ email, password, firstName, lastName ]);
-		res.json({ msg: 'success', id: result[0].insertId });
+		res.json({
+			msg: 'success register',
+			redirect: true,
+			user: { email, firstName, lastName, userID: result[0].insertId }
+		});
 	} catch (e) {
 		res.json(e);
 	}
 });
 
-router.get('/login', async (req, res, next) => {
+router.post('/login', async (req, res, next) => {
 	const { email, password } = req.body;
 	if (!email || !password) return res.json({ msg: 'fields cannot be empty' });
 	try {
@@ -29,22 +33,26 @@ router.get('/login', async (req, res, next) => {
 		console.log(user);
 		if (!user) return res.json({ msg: 'user not exist' });
 		const token = await createJWTToken(delete user.password);
-		res.json({ msg: 'success logged in', user, token });
+		res.json({ msg: 'success logged in', user, token, redirect: true });
 	} catch (e) {
 		res.json(e);
 	}
 });
 
-router.get('/reset', async (req, res, next) => {
-	const { password, newPassword } = req.body;
-	if (!password || !newPassword) return res.json({ msg: 'fields cannot be empty' });
+router.post('/reset', async (req, res, next) => {
+	const { password, newPassword, newPasswordMatch } = req.body;
+	console.log(password);
+	console.log(newPassword);
+	if (!password || !newPassword || !newPasswordMatch) return res.json({ msg: 'fields cannot be empty' });
 	//check if user exist with password
 	const user = await checkIfUserExistWithPassword(password);
+
 	if (!user) return res.json({ msg: 'no user exist with this password' });
+	if (newPassword !== newPasswordMatch) return res.json({ msg: 'incorrect password match' });
 	//update password based on found user
 	try {
 		await pool.execute(updatePassword(), [ newPassword, user.id ]);
-		res.json({ msg: 'password updated', user: user.id });
+		res.json({ msg: 'password updated', user: user.id, redirect: true });
 	} catch (e) {
 		res.json(e);
 	}
